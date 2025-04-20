@@ -3,6 +3,10 @@
 #include <cstdio>
 #include <cstring>
 
+#ifndef _WIN64
+#error There is only support for 64 bit Windows as of now
+#endif
+
 namespace Hooker
 {
     typedef unsigned char uint8;
@@ -56,6 +60,25 @@ namespace Hooker
         return nullptr;
     }
 
+    void WriteJmpRelative(void* ptr_to_jmp, void* jmp_destination)
+    {
+        ((uint8*)ptr_to_jmp)[0] = 0xE9;
+        *(int32*)&((uint8*)ptr_to_jmp)[1] = (uint64)jmp_destination - ((uint64)ptr_to_jmp + 5);
+    }
+
+    void WriteJmp(void* ptr_to_jmp, void* jmp_destination)
+    {
+        static uint8 jmptemplate[13] = {0x49, 0xBB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x41, 0xFF, 0xE3};
+        memcpy(ptr_to_jmp, jmptemplate, 13);
+        *(uint64*)&((uint8*)ptr_to_jmp)[2] = (uint64)jmp_destination;
+    }
+
+    // banger name
+    void* JmpUnrelativer(void* ptr_to_jmp)
+    {
+        return (void*)((uint64)ptr_to_jmp + 5 + *(int32*)&((uint8*)ptr_to_jmp)[1]);
+    }
+
     void Hook(void* func_to_hook, void* new_func)
     {
         DWORD temp;
@@ -65,22 +88,15 @@ namespace Hooker
         
         if (func_as_arr[0] == 0xE9)
         {
-            func_to_hook = (void*)((uint64)func_to_hook + 5 + *(int32*)&func_as_arr[1]);
+            func_to_hook = JmpUnrelativer(func_to_hook);
             func_as_arr = (uint8*)func_to_hook;
 
             VirtualProtect(func_to_hook, 5, PAGE_EXECUTE_READWRITE, &temp);
         }
 
-        void* relay = AllocatePageNearAddress(func_to_hook, 5);
-        uint8* relay_as_arr = (uint8*)relay;
-        relay_as_arr[0] = 0x49;
-        relay_as_arr[1] = 0xBB;
-        *(uint64*)&relay_as_arr[2] = (uint64)new_func;
-        relay_as_arr[10] = 0x41;
-        relay_as_arr[11] = 0xFF;
-        relay_as_arr[12] = 0xE3;
+        void* relay = AllocatePageNearAddress(func_to_hook, 13);
+        WriteJmp(relay, new_func);
 
-        func_as_arr[0] = 0xE9;
-        *(int32*)&func_as_arr[1] = (uint64)relay - ((uint64)func_to_hook + 5);
+        WriteJmpRelative(func_to_hook, relay);
     }
 }
