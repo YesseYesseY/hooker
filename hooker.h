@@ -81,14 +81,9 @@ namespace Hooker
 
     // For now it's REQUIRED to input bytes_to_store the amount of bytes to store in the relay before jumping
     // You can get it from ida, x64dbg or anything it just needs to be 1. over 5 bytes and 2. cant contain uncomplete instructions
-    void Hook(void* func_to_hook, void* new_func, void** original_function = nullptr, int32 bytes_to_store = 5)
+    // Also possible to put -1 and pray to whatever you believe in that there's a sub, rsp after 5 bytes
+    void Hook(void* func_to_hook, void* new_func, void** original_function = nullptr, int32 bytes_to_store = -1)
     {
-        if (bytes_to_store < 5)
-        {
-            printf("bytes_to_store needs to be 5 or more\n");
-            return;
-        }
-
         DWORD temp;
         VirtualProtect(func_to_hook, 5, PAGE_EXECUTE_READWRITE, &temp);
         
@@ -104,6 +99,25 @@ namespace Hooker
 
         if (original_function != nullptr)
         {
+            // Works sometimes, sometimes not
+            static uint8 subrsp[3] = { 0x48, 0x83, 0xEC }; 
+            if (bytes_to_store == -1)
+            {
+                for (int i = 5; i < 50; i++)
+                {
+                    if (memcmp(&func_as_arr[i], subrsp, 3) == 0)
+                    {
+                        bytes_to_store = i + 4;
+                    }
+                }
+            }
+
+            if (bytes_to_store < 5)
+            {
+                printf("bytes_to_store needs to be 5 or more\n");
+                return;
+            }
+
             void* trampoline = AllocatePageNearAddress(new_func, 13 + bytes_to_store);
             memcpy(trampoline, func_to_hook, bytes_to_store);
             WriteJmp((void*)((uint64)trampoline + bytes_to_store), (void*)((uint64)func_to_hook + bytes_to_store));
