@@ -32,9 +32,12 @@ int MessageBoxHook(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
 
 int main()
 {
+    Hooker::SimpleHook NormalSimpleHook(NormalFunction, NormalFunctionHook);
+    NormalSimpleHook.CreateHook();
     NormalFunction();
-    Hooker::Hook(NormalFunction, NormalFunctionHook);
+    NormalSimpleHook.RemoveHook();
     NormalFunction();
+
     printf("Num: %i\n", AddNums(34, 35));
     Hooker::Hook(AddNums, AddNumsHook);
     printf("Num: %i\n", AddNums(210, 2));

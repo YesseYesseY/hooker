@@ -99,4 +99,49 @@ namespace Hooker
 
         WriteJmpRelative(func_to_hook, relay);
     }
+
+    class SimpleHook
+    {
+    public:
+        SimpleHook(void* func_to_hook, void* new_func)
+        {
+            func_location = func_to_hook;
+            if (((uint8*)func_to_hook)[0] == 0xE9) // TODO: Change to while?
+                func_to_hook = JmpUnrelativer(func_to_hook);
+
+            relay_location = AllocatePageNearAddress(func_to_hook, 13);
+            WriteJmp(relay_location, new_func);
+
+            hook_location = new_func;
+            hooked = false;
+        }
+
+        void CreateHook()
+        {
+            if (hooked)
+                return;
+
+            VirtualProtect(func_location, 5, PAGE_EXECUTE_READWRITE, &prevProtect);
+            memcpy(origBytes, func_location, 5);
+            WriteJmpRelative(func_location, relay_location);
+            hooked = true;
+        }
+
+        void RemoveHook()
+        {
+            if (!hooked)
+                return;
+
+            memcpy(func_location, origBytes, 5);
+            hooked = false;
+        }
+
+    private:
+        void* func_location;
+        void* hook_location;
+        void* relay_location;
+        bool hooked;
+        DWORD prevProtect;
+        uint8 origBytes[5];
+    };
 }
