@@ -103,9 +103,9 @@ namespace Hooker
             static uint8 subrsp[3] = { 0x48, 0x83, 0xEC }; 
             if (bytes_to_store == -1)
             {
-                for (int i = 5; i < 50; i++)
+                for (int i = 0; i < 50; i++)
                 {
-                    if (memcmp(&func_as_arr[i], subrsp, 3) == 0)
+                    if (memcmp(&func_as_arr[i], subrsp, 3) == 0 && i + 4 >= 5)
                     {
                         bytes_to_store = i + 4;
                     }
@@ -118,7 +118,7 @@ namespace Hooker
                 return;
             }
 
-            void* trampoline = AllocatePageNearAddress(new_func, 13 + bytes_to_store);
+            void* trampoline = AllocatePageNearAddress(new_func, 13 + bytes_to_store); // TODO: Move this to the relay for less calls to APND?
             memcpy(trampoline, func_to_hook, bytes_to_store);
             WriteJmp((void*)((uint64)trampoline + bytes_to_store), (void*)((uint64)func_to_hook + bytes_to_store));
             *original_function = trampoline;

@@ -45,6 +45,17 @@ int SubNumsHook(int a, int b)
 }
 int (*SubNumsOriginal)(int,int) = nullptr;
 
+// FIXME: This fails trampoline hook because the stored bytes has a relative jump
+int RandomName(bool yes)
+{
+    goto yesuwu;
+    return 30;
+yesuwu:
+    return 60;
+}
+
+void (*NormalFunctionOriginal)() = nullptr;
+
 int main()
 {
     Hooker::SimpleHook NormalSimpleHook(NormalFunction, NormalFunctionHook);
