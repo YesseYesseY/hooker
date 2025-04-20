@@ -30,6 +30,8 @@ int MessageBoxHook(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
     return MessageBoxW(hWnd, L"Get hooked", L"xd", MB_CANCELTRYCONTINUE);
 }
 
+int (*AddNumsOriginal)(int, int) = nullptr;
+
 int main()
 {
     Hooker::SimpleHook NormalSimpleHook(NormalFunction, NormalFunctionHook);
@@ -39,8 +41,9 @@ int main()
     NormalFunction();
 
     printf("Num: %i\n", AddNums(34, 35));
-    Hooker::Hook(AddNums, AddNumsHook);
+    Hooker::Hook(AddNums, AddNumsHook, (void**)&AddNumsOriginal, 8);
     printf("Num: %i\n", AddNums(210, 2));
+    printf("Num: %i\n", AddNumsOriginal(191, 1146));
 
     Hooker::Hook(MessageBoxA, MessageBoxHook);
     MessageBoxA(0, "This is a normal messagebox :)", "Normal", 0);
